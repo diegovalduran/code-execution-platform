@@ -26,9 +26,19 @@ interface Submission {
 
 export default function AdminPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
+
+  useEffect(() => {
+    // Check for status in URL query params
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get('status');
+    if (statusParam && ['all', 'pending', 'approved', 'rejected'].includes(statusParam)) {
+      setStatusFilter(statusParam);
+    }
+  }, []);
 
   useEffect(() => {
     fetchSubmissions();
@@ -37,6 +47,7 @@ export default function AdminPage() {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
+      // Fetch filtered submissions for display
       const url = statusFilter === 'all' 
         ? '/api/submissions' 
         : `/api/submissions?status=${statusFilter}`;
@@ -44,6 +55,13 @@ export default function AdminPage() {
       if (!response.ok) throw new Error('Failed to fetch submissions');
       const data = await response.json();
       setSubmissions(data);
+
+      // Always fetch all submissions for accurate counts
+      const allResponse = await fetch('/api/submissions');
+      if (allResponse.ok) {
+        const allData = await allResponse.json();
+        setAllSubmissions(allData);
+      }
     } catch (err) {
       setError('Failed to load submissions');
       console.error(err);
@@ -88,9 +106,9 @@ export default function AdminPage() {
           onFilterChange={setStatusFilter}
           showCounts={true}
           counts={{
-            pending: submissions.filter(s => s.status === 'pending').length,
-            approved: submissions.filter(s => s.status === 'approved').length,
-            rejected: submissions.filter(s => s.status === 'rejected').length,
+            pending: allSubmissions.filter(s => s.status === 'pending').length,
+            approved: allSubmissions.filter(s => s.status === 'approved').length,
+            rejected: allSubmissions.filter(s => s.status === 'rejected').length,
           }}
         />
       </div>
