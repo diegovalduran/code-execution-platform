@@ -43,8 +43,29 @@ export async function POST(request: Request) {
       const startTime = Date.now();
 
       try {
-        // Modify code to use the test case input
-        const codeWithInput = `${code}\n\n# Test input\ntest_input = ${testCase.input}`;
+        // Inject test case execution after user's code
+        // Parse input and call the solution function automatically
+        const codeWithTestExecution = `${code}
+
+# Automatically injected test execution
+try:
+    import json
+    test_input = ${testCase.input}
+    
+    # Call solution with unpacked arguments
+    # If test_input is a list, unpack it as arguments
+    if isinstance(test_input, list):
+        result = solution(*test_input)
+    else:
+        result = solution(test_input)
+    
+    # Print result as JSON for consistency
+    print(json.dumps(result) if isinstance(result, (list, dict)) else result)
+except Exception as e:
+    print(f"Error: {e}")
+    import traceback
+    traceback.print_exc()
+`;
 
         const response = await axios.post(`${PISTON_API}/execute`, {
           language: language === 'python' ? 'python' : language,
@@ -52,7 +73,7 @@ export async function POST(request: Request) {
           files: [
             {
               name: 'solution.py',
-              content: codeWithInput,
+              content: codeWithTestExecution,
             },
           ],
           stdin: '',
@@ -71,9 +92,26 @@ export async function POST(request: Request) {
         const actualOutput = output.trim();
         const expectedOutput = testCase.expectedOutput.trim();
 
+        // Compare outputs - handle arrays that might be in different order
+        let passed = false;
+        try {
+          const actualParsed = JSON.parse(actualOutput);
+          const expectedParsed = JSON.parse(expectedOutput);
+          
+          // If both are arrays, sort before comparing
+          if (Array.isArray(actualParsed) && Array.isArray(expectedParsed)) {
+            passed = JSON.stringify(actualParsed.slice().sort()) === JSON.stringify(expectedParsed.slice().sort()) && !stderr;
+          } else {
+            passed = actualOutput === expectedOutput && !stderr;
+          }
+        } catch {
+          // Not JSON parseable, do exact string comparison
+          passed = actualOutput === expectedOutput && !stderr;
+        }
+
         results.push({
           testCaseId: testCase.id,
-          passed: actualOutput === expectedOutput && !stderr,
+          passed,
           actualOutput,
           expectedOutput,
           errorMessage: stderr || undefined,

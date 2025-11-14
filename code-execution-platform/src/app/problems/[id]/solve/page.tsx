@@ -18,13 +18,28 @@ interface Problem {
   }>;
 }
 
+interface TestResult {
+  testCaseId: string;
+  passed: boolean;
+  actualOutput: string;
+  expectedOutput: string;
+  errorMessage?: string;
+  executionTime?: number;
+}
+
+interface ExecutionResults {
+  results: TestResult[];
+  summary: {
+    passed: number;
+    total: number;
+    allPassed: boolean;
+  };
+}
+
 const DEFAULT_PYTHON_CODE = `def solution():
     # Write your solution here
-    pass
-
-# Call your solution
-result = solution()
-print(result)`;
+    # Your function will be called automatically with test inputs
+    pass`;
 
 export default function SolveProblem() {
   const params = useParams();
@@ -32,6 +47,8 @@ export default function SolveProblem() {
   const [code, setCode] = useState(DEFAULT_PYTHON_CODE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [running, setRunning] = useState(false);
+  const [testResults, setTestResults] = useState<ExecutionResults | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -50,6 +67,38 @@ export default function SolveProblem() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunTests = async () => {
+    if (!problem || !problem.testCases || problem.testCases.length === 0) {
+      alert('No test cases available for this problem');
+      return;
+    }
+
+    setRunning(true);
+    setTestResults(null);
+
+    try {
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          language: 'python',
+          testCases: problem.testCases,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Execution failed');
+
+      const results = await response.json();
+      setTestResults(results);
+    } catch (err) {
+      console.error('Error running tests:', err);
+      alert('Failed to run tests. Please try again.');
+    } finally {
+      setRunning(false);
     }
   };
 
@@ -150,26 +199,91 @@ export default function SolveProblem() {
 
             <div className="mt-4 flex gap-3">
               <button
-                className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                onClick={() => alert('Run tests functionality coming next!')}
+                className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                onClick={handleRunTests}
+                disabled={running}
               >
-                Run Tests
+                {running ? 'Running Tests...' : 'Run Tests'}
               </button>
               <button
                 className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                onClick={() => setCode(DEFAULT_PYTHON_CODE)}
+                onClick={() => {
+                  setCode(DEFAULT_PYTHON_CODE);
+                  setTestResults(null);
+                }}
               >
                 Reset
               </button>
             </div>
           </div>
 
-          {/* Test Results Placeholder */}
+          {/* Test Results */}
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-900">Test Results</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Run tests to see results here
-            </p>
+            
+            {!testResults ? (
+              <p className="mt-2 text-sm text-gray-600">
+                Run tests to see results here
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {/* Summary */}
+                <div className={`rounded-md p-3 ${testResults.summary.allPassed ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <p className={`text-sm font-medium ${testResults.summary.allPassed ? 'text-green-800' : 'text-red-800'}`}>
+                    {testResults.summary.allPassed ? '✓ All tests passed!' : '✗ Some tests failed'}
+                  </p>
+                  <p className={`text-xs ${testResults.summary.allPassed ? 'text-green-600' : 'text-red-600'}`}>
+                    {testResults.summary.passed} / {testResults.summary.total} test cases passed
+                  </p>
+                </div>
+
+                {/* Individual Results */}
+                {testResults.results.map((result, index) => (
+                  <div
+                    key={result.testCaseId}
+                    className={`rounded-md border p-3 ${
+                      result.passed
+                        ? 'border-green-200 bg-green-50'
+                        : 'border-red-200 bg-red-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900">
+                        Test Case {index + 1}
+                      </span>
+                      <span className={`text-xs font-medium ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
+                        {result.passed ? '✓ PASSED' : '✗ FAILED'}
+                      </span>
+                    </div>
+                    
+                    {!result.passed && (
+                      <div className="mt-2 space-y-2 text-xs">
+                        <div>
+                          <p className="font-medium text-gray-700">Expected:</p>
+                          <pre className="mt-1 rounded bg-white p-2">{result.expectedOutput}</pre>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-700">Got:</p>
+                          <pre className="mt-1 rounded bg-white p-2">{result.actualOutput || '(no output)'}</pre>
+                        </div>
+                        {result.errorMessage && (
+                          <div>
+                            <p className="font-medium text-red-700">Error:</p>
+                            <pre className="mt-1 rounded bg-white p-2 text-red-600">{result.errorMessage}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {result.executionTime && (
+                      <p className="mt-2 text-xs text-gray-500">
+                        Execution time: {result.executionTime}ms
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
