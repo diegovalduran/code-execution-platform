@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import TestCaseManager from '@/components/TestCaseManager';
 
 interface Problem {
   id: string;
@@ -131,35 +132,12 @@ export default function ProblemDetail() {
             </div>
           </div>
 
-          {problem.testCases && problem.testCases.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Test Cases ({problem.testCases.length})
-              </h2>
-              <div className="mt-4 space-y-4">
-                {problem.testCases.map((testCase, index) => (
-                  <div
-                    key={testCase.id}
-                    className="rounded-md border border-gray-200 bg-gray-50 p-4"
-                  >
-                    <h4 className="mb-2 font-medium text-gray-900">
-                      Test Case {index + 1}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs text-gray-600">Input:</p>
-                        <pre className="mt-1 text-sm">{testCase.input}</pre>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Expected Output:</p>
-                        <pre className="mt-1 text-sm">{testCase.expectedOutput}</pre>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <TestCaseManager
+            problemId={problem.id}
+            testCases={problem.testCases || []}
+            onTestCaseAdded={() => fetchProblem(params.id as string)}
+            onTestCaseDeleted={() => fetchProblem(params.id as string)}
+          />
 
           <div className="border-t border-gray-200 pt-6">
             <Link
