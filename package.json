@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@prisma/client": "^6.19.0",
+    "axios": "^1.13.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.19.0"
+  }
+}
