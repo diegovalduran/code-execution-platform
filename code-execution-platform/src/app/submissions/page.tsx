@@ -51,14 +51,19 @@ export default function SubmissionsPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchSubmissions();
-  }, []);
+  }, [statusFilter]);
 
   const fetchSubmissions = async () => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/submissions');
+      const url = statusFilter === 'all' 
+        ? '/api/submissions' 
+        : `/api/submissions?status=${statusFilter}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch submissions');
       const data = await response.json();
       setSubmissions(data);
@@ -99,18 +104,68 @@ export default function SubmissionsPage() {
         </p>
       </div>
 
+      {/* Status Filter */}
+      <div className="mb-6 flex gap-2">
+        <button
+          onClick={() => setStatusFilter('all')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            statusFilter === 'all'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setStatusFilter('pending')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            statusFilter === 'pending'
+              ? 'bg-yellow-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => setStatusFilter('approved')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            statusFilter === 'approved'
+              ? 'bg-green-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          Approved
+        </button>
+        <button
+          onClick={() => setStatusFilter('rejected')}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            statusFilter === 'rejected'
+              ? 'bg-red-600 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          Rejected
+        </button>
+      </div>
+
       {submissions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900">No submissions yet</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            {statusFilter === 'all' ? 'No submissions yet' : `No ${statusFilter} submissions`}
+          </h3>
           <p className="mt-2 text-gray-600">
-            Submit a solution to see it here
+            {statusFilter === 'all' 
+              ? 'Submit a solution to see it here'
+              : `You don't have any ${statusFilter} submissions yet`}
           </p>
-          <Link
-            href="/"
-            className="mt-4 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-          >
-            Browse Problems
-          </Link>
+          {statusFilter === 'all' && (
+            <Link
+              href="/"
+              className="mt-4 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            >
+              Browse Problems
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
