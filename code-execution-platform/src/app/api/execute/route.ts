@@ -186,14 +186,20 @@ export async function POST(request: Request) {
 try {
     ${testInputCode}
     
-    // Call solution
-    const result = ${functionCall};
-    
-    // Print result as JSON
-    if (result !== undefined && result !== null) {
-        console.log(JSON.stringify(result));
+    // Check if function exists
+    if (typeof ${cleanFunctionName} !== 'function') {
+        console.log('ERROR: Function ${cleanFunctionName} is not defined or is not a function');
+        console.log('DEBUG: Available functions:', Object.keys(globalThis).filter(k => typeof globalThis[k] === 'function').join(', '));
     } else {
-        console.log('null');
+        // Call solution
+        const result = ${functionCall};
+        
+        // Print result as JSON
+        if (result !== undefined && result !== null) {
+            console.log(JSON.stringify(result));
+        } else {
+            console.log('null');
+        }
     }
 } catch (e) {
     // Print error to stdout so we can capture it
@@ -258,11 +264,13 @@ except Exception as e:
         const executionTime = Date.now() - startTime;
         const output = response.data.run?.output || response.data.run?.stdout || '';
         const stderr = response.data.run?.stderr || '';
+        const exitCode = response.data.run?.code; // Exit code
         
         // Log the full response for debugging
         console.log('Execution response:', {
           output,
           stderr,
+          exitCode,
           functionCall,
           cleanFunctionName,
           testCaseInput: testCase.input
@@ -288,6 +296,12 @@ except Exception as e:
           }
         } else if (stderr) {
           errorMessage = stderr;
+        } else if (exitCode && exitCode !== 0) {
+          // Non-zero exit code indicates an error
+          errorMessage = `Execution failed with exit code ${exitCode}`;
+        } else if (!actualOutput && !stderr) {
+          // No output and no error - function might not have returned anything
+          errorMessage = 'No output from function - function may not have returned a value';
         }
         
         // If actualOutput is "null" (JSON representation of None), show it as "None" for clarity
@@ -329,14 +343,30 @@ except Exception as e:
           errorMessage: errorMessage || stderr || undefined,
           executionTime,
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Execution error:', error);
+        
+        // Extract more detailed error message
+        let errorMessage = 'Execution failed';
+        if (error.response) {
+          // API error (e.g., 429 rate limit)
+          const status = error.response.status;
+          const statusText = error.response.statusText;
+          if (status === 429) {
+            errorMessage = 'Rate limit exceeded - please try again in a moment';
+          } else {
+            errorMessage = `API error (${status}): ${statusText}`;
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
         results.push({
           testCaseId: testCase.id,
           passed: false,
-          actualOutput: '',
+          actualOutput: '(no output)',
           expectedOutput: testCase.expectedOutput,
-          errorMessage: 'Execution failed',
+          errorMessage,
           executionTime: Date.now() - startTime,
         });
       }

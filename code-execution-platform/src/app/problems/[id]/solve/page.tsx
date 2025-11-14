@@ -290,18 +290,18 @@ export default function SolveProblem() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg text-gray-600">Loading problem...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
+        <div className="text-lg text-[#b3b3b3]">Loading problem...</div>
       </div>
     );
   }
 
   if (error || !problem) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
         <div className="text-center">
-          <div className="text-lg text-red-600">{error || 'Problem not found'}</div>
-          <Link href="/" className="mt-4 text-indigo-600 hover:text-indigo-500">
+          <div className="text-lg text-[#ff3b3b]">{error || 'Problem not found'}</div>
+          <Link href="/" className="mt-4 text-[#9333ea] hover:text-[#7c3aed] transition-colors">
             ← Back to Problems
           </Link>
         </div>
@@ -310,127 +310,172 @@ export default function SolveProblem() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Link
-          href={`/problems/${problem.id}`}
-          className="text-sm text-indigo-600 hover:text-indigo-500"
-        >
-          ← Back to Problem
-        </Link>
-      </div>
+    <div className="flex h-[calc(100vh-3.5rem)] bg-[#1a1a1a]">
+      {/* Left Panel - Problem Description */}
+      <div className="flex w-1/3 overflow-y-auto border-r border-[#3a3a3a] bg-[#262626]">
+        <div className="p-6">
+          <div className="mb-4">
+            <Link
+              href={`/problems/${problem.id}`}
+              className="text-sm text-[#b3b3b3] hover:text-[#9333ea] transition-colors"
+            >
+              ← Back to Problem
+            </Link>
+          </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Left Panel - Problem Description */}
-        <div className="space-y-6">
-          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h1 className="text-2xl font-bold text-gray-900">{problem.title}</h1>
-            <div className="mt-4 space-y-4">
-              <div>
-                <h2 className="text-sm font-semibold text-gray-900">Description</h2>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
-                  {problem.description}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">{problem.title}</h1>
+              <div className="mt-4 space-y-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-900">Example Input</h3>
-                  <pre className="mt-1 rounded-md bg-gray-50 p-2 text-xs">
-                    {problem.exampleInput}
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-900">Example Output</h3>
-                  <pre className="mt-1 rounded-md bg-gray-50 p-2 text-xs">
-                    {problem.exampleOutput}
-                  </pre>
-                </div>
-              </div>
-
-              {problem.testCases && problem.testCases.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Test Cases: {problem.testCases.length}
-                  </h3>
-                  <p className="mt-1 text-xs text-gray-600">
-                    Your solution will be tested against {problem.testCases.length} test case
-                    {problem.testCases.length !== 1 ? 's' : ''}
+                  <h2 className="text-base font-medium text-white">Description</h2>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#b3b3b3]">
+                    {problem.description}
                   </p>
                 </div>
-              )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-xs font-medium text-[#888888] uppercase tracking-wide">Example Input</h3>
+                    <pre className="mt-2 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] p-3 text-xs text-[#e5e5e5] font-mono">
+                      {problem.exampleInput}
+                    </pre>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-medium text-[#888888] uppercase tracking-wide">Example Output</h3>
+                    <pre className="mt-2 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] p-3 text-xs text-[#e5e5e5] font-mono">
+                      {problem.exampleOutput}
+                    </pre>
+                  </div>
+                </div>
+
+                {problem.testCases && problem.testCases.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-sm font-medium text-white">
+                        Test Cases
+                      </h3>
+                      <span className="rounded-full bg-[#9333ea] px-2.5 py-0.5 text-xs font-medium text-white">
+                        {problem.testCases.length}
+                      </span>
+                    </div>
+                    <div className={`space-y-2 ${problem.testCases.length > 10 ? 'max-h-[400px] overflow-y-auto pr-2' : ''}`}>
+                      {problem.testCases.map((testCase, index) => (
+                        <div
+                          key={testCase.id}
+                          className="rounded-md border border-[#3a3a3a] bg-[#1a1a1a] p-3"
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="rounded-full bg-[#9333ea] px-2 py-0.5 text-xs font-medium text-white">
+                              {index + 1}
+                            </span>
+                            <span className="text-xs font-medium text-white">Test Case</span>
+                          </div>
+                          <div className="space-y-2 text-xs">
+                            <div>
+                              <p className="font-medium text-[#b3b3b3] mb-1">Input:</p>
+                              <pre className="rounded bg-[#262626] border border-[#3a3a3a] p-2 text-[#e5e5e5] font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                                {testCase.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <p className="font-medium text-[#b3b3b3] mb-1">Expected Output:</p>
+                              <pre className="rounded bg-[#262626] border border-[#3a3a3a] p-2 text-[#e5e5e5] font-mono overflow-x-auto whitespace-pre-wrap break-words">
+                                {testCase.expectedOutput}
+                              </pre>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Right Panel - Code Editor and Actions */}
-        <div className="space-y-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Your Solution</h2>
-              <select
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                <option value="python">Python</option>
-                <option value="javascript">JavaScript</option>
-              </select>
-            </div>
+      {/* Right Panel - Code Editor and Test Results */}
+      <div className="flex w-2/3 flex-col border-l border-[#3a3a3a] bg-[#1a1a1a]">
+        {/* Code Editor Section */}
+        <div className="flex-1 flex flex-col border-b border-[#3a3a3a]">
+          <div className="flex items-center justify-between border-b border-[#3a3a3a] bg-[#262626] px-4 py-2">
+            <h2 className="text-sm font-medium text-white">Code</h2>
+            <select
+              className="rounded-md border border-[#3a3a3a] bg-[#1a1a1a] px-3 py-1 text-xs text-white focus:border-[#9333ea] focus:outline-none"
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              <option value="python" className="bg-[#1a1a1a]">Python3</option>
+              <option value="javascript" className="bg-[#1a1a1a]">JavaScript</option>
+            </select>
+          </div>
 
+          <div className="flex-1 overflow-hidden">
             <CodeEditor
               value={code}
               onChange={(value) => setCode(value || '')}
               language={language === 'javascript' ? 'javascript' : 'python'}
-              height="500px"
+              height="100%"
             />
-
-            <div className="mt-4 space-y-3">
-              <div className="flex gap-3">
-                <button
-                  className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-                  onClick={handleRunTests}
-                  disabled={running || submitting}
-                >
-                  {running ? 'Running Tests...' : 'Run Tests'}
-                </button>
-                <button
-                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                  onClick={handleClear}
-                  disabled={running || submitting}
-                >
-                  Clear
-                </button>
-              </div>
-              
-              {testResults && (
-                <button
-                  className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
-                  onClick={handleSubmit}
-                  disabled={submitting || running}
-                >
-                  {submitting ? 'Submitting...' : 'Submit for Review'}
-                </button>
-              )}
-            </div>
           </div>
 
-          {/* Test Results */}
-          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-900">Test Results</h3>
-            
+          <div className="border-t border-[#3a3a3a] bg-[#262626] p-3">
+            <div className="flex items-center justify-end gap-2">
+              <button
+                className="rounded-md border border-[#3a3a3a] bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#262626] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleClear}
+                disabled={running || submitting}
+              >
+                Clear
+              </button>
+              <button
+                className="rounded-md bg-[#9333ea] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#7c3aed] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleRunTests}
+                disabled={running || submitting}
+              >
+                {running ? 'Running...' : 'Run'}
+              </button>
+              <button
+                className="rounded-md bg-[#00b8a3] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#00a693] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmit}
+                disabled={!testResults || submitting || running}
+                title={!testResults ? 'Run tests first before submitting' : ''}
+              >
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Test Results Section */}
+        <div className="flex h-[40%] flex-col border-t border-[#3a3a3a]">
+          <div className="border-b border-[#3a3a3a] bg-[#262626] px-4 py-2">
+            <h3 className="text-sm font-medium text-white">Test Results</h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
             {!testResults ? (
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="text-sm text-[#888888]">
                 Run tests to see results here
               </p>
             ) : (
-              <div className="mt-4 space-y-3">
+              <div className="space-y-3">
                 {/* Summary */}
-                <div className={`rounded-md p-3 ${testResults.summary.allPassed ? 'bg-green-50' : 'bg-red-50'}`}>
-                  <p className={`text-sm font-medium ${testResults.summary.allPassed ? 'text-green-800' : 'text-red-800'}`}>
+                <div className={`rounded-md border p-3 ${
+                  testResults.summary.allPassed 
+                    ? 'border-[#00b8a3] bg-[#00b8a3]/10' 
+                    : 'border-[#ff3b3b] bg-[#ff3b3b]/10'
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    testResults.summary.allPassed ? 'text-[#00b8a3]' : 'text-[#ff3b3b]'
+                  }`}>
                     {testResults.summary.allPassed ? '✓ All tests passed!' : '✗ Some tests failed'}
                   </p>
-                  <p className={`text-xs ${testResults.summary.allPassed ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-xs mt-1 ${
+                    testResults.summary.allPassed ? 'text-[#00b8a3]' : 'text-[#ff3b3b]'
+                  }`}>
                     {testResults.summary.passed} / {testResults.summary.total} test cases passed
                   </p>
                 </div>
@@ -441,40 +486,42 @@ export default function SolveProblem() {
                     key={result.testCaseId}
                     className={`rounded-md border p-3 ${
                       result.passed
-                        ? 'border-green-200 bg-green-50'
-                        : 'border-red-200 bg-red-50'
+                        ? 'border-[#00b8a3]/30 bg-[#00b8a3]/5'
+                        : 'border-[#ff3b3b]/30 bg-[#ff3b3b]/5'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-white">
                         Test Case {index + 1}
                       </span>
-                      <span className={`text-xs font-medium ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={`text-xs font-medium ${
+                        result.passed ? 'text-[#00b8a3]' : 'text-[#ff3b3b]'
+                      }`}>
                         {result.passed ? '✓ PASSED' : '✗ FAILED'}
                       </span>
                     </div>
                     
                     {!result.passed && (
-                      <div className="mt-2 space-y-2 text-xs">
+                      <div className="mt-3 space-y-2 text-xs">
                         <div>
-                          <p className="font-medium text-gray-700">Expected:</p>
-                          <pre className="mt-1 rounded bg-white p-2">{result.expectedOutput}</pre>
+                          <p className="font-medium text-[#b3b3b3] mb-1">Expected:</p>
+                          <pre className="rounded bg-[#1a1a1a] border border-[#3a3a3a] p-2 text-[#e5e5e5] font-mono overflow-x-auto">{result.expectedOutput}</pre>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-700">Got:</p>
-                          <pre className="mt-1 rounded bg-white p-2">{result.actualOutput || '(no output)'}</pre>
+                          <p className="font-medium text-[#b3b3b3] mb-1">Got:</p>
+                          <pre className="rounded bg-[#1a1a1a] border border-[#3a3a3a] p-2 text-[#e5e5e5] font-mono overflow-x-auto">{result.actualOutput || '(no output)'}</pre>
                         </div>
                         {result.errorMessage && (
                           <div>
-                            <p className="font-medium text-red-700">Error:</p>
-                            <pre className="mt-1 rounded bg-white p-2 text-red-600">{result.errorMessage}</pre>
+                            <p className="font-medium text-[#ff3b3b] mb-1">Error:</p>
+                            <pre className="rounded bg-[#1a1a1a] border border-[#3a3a3a] p-2 text-[#ff3b3b] font-mono overflow-x-auto">{result.errorMessage}</pre>
                           </div>
                         )}
                       </div>
                     )}
                     
                     {result.executionTime && (
-                      <p className="mt-2 text-xs text-gray-500">
+                      <p className="mt-2 text-xs text-[#888888]">
                         Execution time: {result.executionTime}ms
                       </p>
                     )}

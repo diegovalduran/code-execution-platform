@@ -5,13 +5,13 @@ interface StatusBadgeProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'approved':
-      return 'bg-green-100 text-green-800';
+      return 'bg-[#00b8a3]/20 text-[#00b8a3] border border-[#00b8a3]/30';
     case 'rejected':
-      return 'bg-red-100 text-red-800';
+      return 'bg-[#ff3b3b]/20 text-[#ff3b3b] border border-[#ff3b3b]/30';
     case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-[#9333ea]/20 text-[#9333ea] border border-[#9333ea]/30';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-[#3a3a3a] text-[#b3b3b3] border border-[#3a3a3a]';
   }
 };
 

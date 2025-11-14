@@ -69,18 +69,18 @@ export default function SubmissionDetail() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg text-gray-600">Loading submission...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
+        <div className="text-lg text-[#b3b3b3]">Loading submission...</div>
       </div>
     );
   }
 
   if (error || !submission) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
         <div className="text-center">
-          <div className="text-lg text-red-600">{error || 'Submission not found'}</div>
-          <Link href="/submissions" className="mt-4 text-indigo-600 hover:text-indigo-500">
+          <div className="text-lg text-[#ff3b3b]">{error || 'Submission not found'}</div>
+          <Link href="/submissions" className="mt-4 text-[#9333ea] hover:text-[#7c3aed] transition-colors">
             ← Back to Submissions
           </Link>
         </div>
@@ -89,62 +89,64 @@ export default function SubmissionDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6">
-        <Link
-          href="/submissions"
-          className="text-sm text-indigo-600 hover:text-indigo-500"
-        >
-          ← Back to Submissions
-        </Link>
-      </div>
+    <div className="min-h-screen bg-[#1a1a1a]">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href="/submissions"
+            className="text-sm text-[#b3b3b3] hover:text-[#9333ea] transition-colors"
+          >
+            ← Back to Submissions
+          </Link>
+        </div>
 
-      <div className="mb-6">
-        <div className="mb-2 flex items-center gap-3">
-          <StatusBadge status={submission.status} />
-          <span className="text-sm text-gray-600">
-            Submitted {new Date(submission.submittedAt).toLocaleString()}
-          </span>
-          {submission.reviewedAt && (
-            <span className="text-sm text-gray-600">
-              Reviewed {new Date(submission.reviewedAt).toLocaleString()}
+        <div className="mb-6">
+          <div className="mb-2 flex items-center gap-3">
+            <StatusBadge status={submission.status} />
+            <span className="text-sm text-[#b3b3b3]">
+              Submitted {new Date(submission.submittedAt).toLocaleString()}
             </span>
+            {submission.reviewedAt && (
+              <span className="text-sm text-[#b3b3b3]">
+                Reviewed {new Date(submission.reviewedAt).toLocaleString()}
+              </span>
+            )}
+          </div>
+          <ProblemDetails
+            title={submission.problem.title}
+            description={submission.problem.description}
+            exampleInput={submission.problem.exampleInput}
+            exampleOutput={submission.problem.exampleOutput}
+            problemId={submission.problem.id}
+          />
+          {submission.reviewerNotes && (
+            <div className="mt-4 rounded-md border border-[#3a3a3a] bg-[#262626] p-4">
+              <h3 className="text-sm font-semibold text-white">Reviewer Notes</h3>
+              <p className="mt-1 text-sm text-[#b3b3b3]">{submission.reviewerNotes}</p>
+            </div>
           )}
         </div>
-        <ProblemDetails
-          title={submission.problem.title}
-          description={submission.problem.description}
-          exampleInput={submission.problem.exampleInput}
-          exampleOutput={submission.problem.exampleOutput}
-          problemId={submission.problem.id}
-        />
-        {submission.reviewerNotes && (
-          <div className="mt-4 rounded-md bg-gray-50 p-4">
-            <h3 className="text-sm font-semibold text-gray-900">Reviewer Notes</h3>
-            <p className="mt-1 text-sm text-gray-700">{submission.reviewerNotes}</p>
-          </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Left: Test Results */}
-        <TestResultsPanel testResults={submission.testResults} />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Left: Test Results */}
+          <TestResultsPanel testResults={submission.testResults} />
 
-        {/* Right: Code */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Your Solution</h2>
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-              {submission.language === 'javascript' ? 'JavaScript' : 'Python'}
-            </span>
+          {/* Right: Code */}
+          <div className="rounded-lg border border-[#3a3a3a] bg-[#262626] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Your Solution</h2>
+              <span className="rounded-full bg-[#9333ea] px-2.5 py-0.5 text-xs font-medium text-white">
+                {submission.language === 'javascript' ? 'JavaScript' : 'Python'}
+              </span>
+            </div>
+            <CodeEditor
+              value={submission.code}
+              onChange={() => {}}
+              language={submission.language}
+              readOnly={true}
+              height="500px"
+            />
           </div>
-          <CodeEditor
-            value={submission.code}
-            onChange={() => {}}
-            language={submission.language}
-            readOnly={true}
-            height="500px"
-          />
         </div>
       </div>
     </div>

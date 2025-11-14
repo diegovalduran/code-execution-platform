@@ -16,30 +16,30 @@ export default function ProblemDetails({
   problemId,
 }: ProblemDetailsProps) {
   return (
-    <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="mb-6 rounded-lg border border-[#3a3a3a] bg-[#262626] p-6">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-semibold text-white">{title}</h1>
 
           {/* Problem Description */}
           <div className="mt-6 space-y-4">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Description</h2>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">
+              <h2 className="text-sm font-medium text-white">Description</h2>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#b3b3b3]">
                 {description}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <h3 className="text-xs font-semibold text-gray-900">Example Input</h3>
-                <pre className="mt-1 rounded-md bg-gray-50 p-2 text-xs">
+                <h3 className="text-xs font-medium text-[#888888] uppercase tracking-wide">Example Input</h3>
+                <pre className="mt-2 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] p-3 text-xs text-[#e5e5e5] font-mono">
                   {exampleInput}
                 </pre>
               </div>
               <div>
-                <h3 className="text-xs font-semibold text-gray-900">Example Output</h3>
-                <pre className="mt-1 rounded-md bg-gray-50 p-2 text-xs">
+                <h3 className="text-xs font-medium text-[#888888] uppercase tracking-wide">Example Output</h3>
+                <pre className="mt-2 rounded-md bg-[#1a1a1a] border border-[#3a3a3a] p-3 text-xs text-[#e5e5e5] font-mono">
                   {exampleOutput}
                 </pre>
               </div>
@@ -48,7 +48,7 @@ export default function ProblemDetails({
         </div>
         <Link
           href={`/problems/${problemId}`}
-          className="ml-4 text-sm text-indigo-600 hover:text-indigo-500"
+          className="ml-4 text-sm text-[#9333ea] hover:text-[#7c3aed] transition-colors"
         >
           View Problem →
         </Link>

@@ -76,28 +76,29 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg text-gray-600">Loading submissions...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
+        <div className="text-lg text-[#b3b3b3]">Loading submissions...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-lg text-red-600">{error}</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#1a1a1a]">
+        <div className="text-lg text-[#ff3b3b]">{error}</div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Review</h1>
-        <p className="mt-2 text-gray-600">
-          Review and approve or reject submitted solutions
-        </p>
-      </div>
+    <div className="min-h-screen bg-[#1a1a1a]">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold text-white">Admin Review</h1>
+          <p className="mt-2 text-[#b3b3b3]">
+            Review and approve or reject submitted solutions
+          </p>
+        </div>
 
       {/* Status Filter */}
       <div className="mb-6">
@@ -114,11 +115,11 @@ export default function AdminPage() {
       </div>
 
       {submissions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900">
+        <div className="rounded-lg border border-dashed border-[#3a3a3a] bg-[#262626] p-12 text-center">
+          <h3 className="text-lg font-medium text-white">
             {statusFilter === 'pending' ? 'No pending submissions' : `No ${statusFilter} submissions`}
           </h3>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-[#b3b3b3]">
             {statusFilter === 'pending' 
               ? 'All submissions have been reviewed'
               : `No ${statusFilter} submissions found`}
@@ -127,19 +128,20 @@ export default function AdminPage() {
       ) : (
         <div className="space-y-4">
           {submissions.map((submission) => (
-            <div
+            <Link
               key={submission.id}
-              className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+              href={`/admin/submissions/${submission.id}`}
+              className="block rounded-lg border border-[#3a3a3a] bg-[#262626] p-6 transition-colors hover:border-[#9333ea] hover:bg-[#2d2d2d] cursor-pointer"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-white">
                       {submission.problem.title}
                     </h3>
                     <StatusBadge status={submission.status} />
                   </div>
-                  <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                  <div className="mt-2 flex items-center gap-4 text-sm text-[#b3b3b3]">
                     <span>
                       Submitted{' '}
                       {new Date(submission.submittedAt).toLocaleDateString()}
@@ -156,25 +158,23 @@ export default function AdminPage() {
                     </span>
                   </div>
                   {submission.reviewerNotes && (
-                    <p className="mt-2 text-sm text-gray-700">
-                      <span className="font-medium">Reviewer Notes:</span>{' '}
+                    <p className="mt-2 text-sm text-[#b3b3b3]">
+                      <span className="font-medium text-white">Reviewer Notes:</span>{' '}
                       {submission.reviewerNotes}
                     </p>
                   )}
                 </div>
                 <div className="ml-4">
-                  <Link
-                    href={`/admin/submissions/${submission.id}`}
-                    className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                  >
+                  <div className="inline-flex items-center rounded-md bg-[#9333ea] px-4 py-2 text-sm font-semibold text-white">
                     Review →
-                  </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

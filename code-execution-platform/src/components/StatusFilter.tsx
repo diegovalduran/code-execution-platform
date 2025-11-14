@@ -39,19 +39,19 @@ export default function StatusFilter({
 
   const getColorClass = (filter: { value: string; color: string }, isActive: boolean) => {
     if (!isActive) {
-      return 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50';
+      return 'bg-[#262626] text-[#b3b3b3] border border-[#3a3a3a] hover:bg-[#2d2d2d] hover:text-white transition-colors';
     }
     switch (filter.color) {
       case 'indigo':
-        return 'bg-indigo-600 text-white';
+        return 'bg-[#9333ea] text-white border border-[#9333ea]';
       case 'yellow':
-        return 'bg-yellow-600 text-white';
+        return 'bg-[#9333ea] text-white border border-[#9333ea]';
       case 'green':
-        return 'bg-green-600 text-white';
+        return 'bg-[#00b8a3] text-white border border-[#00b8a3]';
       case 'red':
-        return 'bg-red-600 text-white';
+        return 'bg-[#ff3b3b] text-white border border-[#ff3b3b]';
       default:
-        return 'bg-gray-600 text-white';
+        return 'bg-[#3a3a3a] text-white border border-[#3a3a3a]';
     }
   };
 
