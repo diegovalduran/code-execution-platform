@@ -24,11 +24,11 @@ interface Submission {
 }
 
 
-export default function SubmissionsPage() {
+export default function AdminPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
 
   useEffect(() => {
     fetchSubmissions();
@@ -75,9 +75,9 @@ export default function SubmissionsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Submissions</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Review</h1>
         <p className="mt-2 text-gray-600">
-          View all your submitted solutions and their review status
+          Review and approve or reject submitted solutions
         </p>
       </div>
 
@@ -86,35 +86,32 @@ export default function SubmissionsPage() {
         <StatusFilter
           currentFilter={statusFilter}
           onFilterChange={setStatusFilter}
+          showCounts={true}
+          counts={{
+            pending: submissions.filter(s => s.status === 'pending').length,
+            approved: submissions.filter(s => s.status === 'approved').length,
+            rejected: submissions.filter(s => s.status === 'rejected').length,
+          }}
         />
       </div>
 
       {submissions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
           <h3 className="text-lg font-medium text-gray-900">
-            {statusFilter === 'all' ? 'No submissions yet' : `No ${statusFilter} submissions`}
+            {statusFilter === 'pending' ? 'No pending submissions' : `No ${statusFilter} submissions`}
           </h3>
           <p className="mt-2 text-gray-600">
-            {statusFilter === 'all' 
-              ? 'Submit a solution to see it here'
-              : `You don't have any ${statusFilter} submissions yet`}
+            {statusFilter === 'pending' 
+              ? 'All submissions have been reviewed'
+              : `No ${statusFilter} submissions found`}
           </p>
-          {statusFilter === 'all' && (
-            <Link
-              href="/"
-              className="mt-4 inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-            >
-              Browse Problems
-            </Link>
-          )}
         </div>
       ) : (
         <div className="space-y-4">
           {submissions.map((submission) => (
-            <Link
+            <div
               key={submission.id}
-              href={`/submissions/${submission.id}`}
-              className="block rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -147,11 +144,16 @@ export default function SubmissionsPage() {
                     </p>
                   )}
                 </div>
-                <div className="ml-4 text-sm text-gray-500">
-                  View Details →
+                <div className="ml-4">
+                  <Link
+                    href={`/admin/submissions/${submission.id}`}
+                    className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                  >
+                    Review →
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
