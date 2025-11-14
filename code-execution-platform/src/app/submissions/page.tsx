@@ -146,18 +146,12 @@ export default function SubmissionsPage() {
                     </p>
                   )}
                 </div>
-                <div className="ml-4 flex gap-2">
+                <div className="ml-4">
                   <Link
                     href={`/problems/${submission.problem.id}/solve?submission=${submission.id}`}
                     className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
                   >
                     Edit Solution →
-                  </Link>
-                  <Link
-                    href={`/submissions/${submission.id}`}
-                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                  >
-                    View Details
                   </Link>
                 </div>
               </div>
