@@ -11,6 +11,9 @@ interface Problem {
   description: string;
   exampleInput: string;
   exampleOutput: string;
+  functionName: string;
+  parameters: string; // JSON string
+  returnType: string;
   createdAt: string;
   testCases: Array<{
     id: string;
@@ -140,6 +143,9 @@ export default function ProblemDetail() {
             problemDescription={problem.description}
             exampleInput={problem.exampleInput}
             exampleOutput={problem.exampleOutput}
+            functionName={problem.functionName}
+            parameters={JSON.parse(problem.parameters)}
+            returnType={problem.returnType}
           />
 
           <div className="border-t border-gray-200 pt-6">

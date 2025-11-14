@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 
+interface Parameter {
+  name: string;
+  type: string;
+}
+
 interface TestCase {
   id: string;
   input: string;
@@ -16,6 +21,9 @@ interface TestCaseManagerProps {
   problemDescription?: string;
   exampleInput?: string;
   exampleOutput?: string;
+  functionName: string;
+  parameters: Parameter[];
+  returnType: string;
 }
 
 export default function TestCaseManager({
@@ -26,6 +34,9 @@ export default function TestCaseManager({
   problemDescription,
   exampleInput,
   exampleOutput,
+  functionName,
+  parameters,
+  returnType,
 }: TestCaseManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,10 +44,39 @@ export default function TestCaseManager({
   const [showGenerateDialog, setShowGenerateDialog] = useState(false);
   const [testCaseCount, setTestCaseCount] = useState(5);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    input: '',
+  const [formData, setFormData] = useState<{
+    parameterValues: Record<string, string>;
+    expectedOutput: string;
+  }>({
+    parameterValues: {},
     expectedOutput: '',
   });
+
+  // Initialize parameter values when form opens or parameters change
+  useEffect(() => {
+    if (showForm && parameters.length > 0) {
+      const initialValues: Record<string, string> = {};
+      parameters.forEach(param => {
+        if (!formData.parameterValues[param.name]) {
+          // Set default based on type
+          if (param.type.includes('List')) {
+            initialValues[param.name] = '[]';
+          } else if (param.type.includes('Dict')) {
+            initialValues[param.name] = '{}';
+          } else if (param.type === 'bool') {
+            initialValues[param.name] = 'false';
+          } else if (param.type === 'int') {
+            initialValues[param.name] = '0';
+          } else {
+            initialValues[param.name] = '';
+          }
+        } else {
+          initialValues[param.name] = formData.parameterValues[param.name];
+        }
+      });
+      setFormData(prev => ({ ...prev, parameterValues: initialValues }));
+    }
+  }, [showForm, parameters]);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Close dialog when clicking outside
@@ -61,12 +101,22 @@ export default function TestCaseManager({
     setLoading(true);
 
     try {
+      // Build input string from parameter values: "param1 = value1, param2 = value2"
+      const inputString = parameters
+        .map(param => `${param.name} = ${formData.parameterValues[param.name] || ''}`)
+        .join(', ');
+
+      const testCaseData = {
+        input: inputString,
+        expectedOutput: formData.expectedOutput,
+      };
+
       if (editingId) {
         // Update existing test case
         const response = await fetch(`/api/test-cases/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(testCaseData),
         });
 
         if (!response.ok) throw new Error('Failed to update test case');
@@ -75,13 +125,13 @@ export default function TestCaseManager({
         const response = await fetch('/api/test-cases', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, problemId }),
+          body: JSON.stringify({ ...testCaseData, problemId }),
         });
 
         if (!response.ok) throw new Error('Failed to create test case');
       }
 
-      setFormData({ input: '', expectedOutput: '' });
+      setFormData({ parameterValues: {}, expectedOutput: '' });
       setShowForm(false);
       setEditingId(null);
       onTestCaseAdded();
@@ -94,8 +144,41 @@ export default function TestCaseManager({
   };
 
   const handleEdit = (testCase: TestCase) => {
+    // Parse the input string back into parameter values
+    const paramValues: Record<string, string> = {};
+    
+    // Parse "param1 = value1, param2 = value2" format
+    if (testCase.input.includes('=')) {
+      const parts = testCase.input.split(',').map(p => p.trim());
+      for (const part of parts) {
+        const equalsIndex = part.indexOf('=');
+        if (equalsIndex !== -1) {
+          const name = part.substring(0, equalsIndex).trim();
+          const value = part.substring(equalsIndex + 1).trim();
+          paramValues[name] = value;
+        }
+      }
+    }
+    
+    // Fill in missing parameters with defaults
+    parameters.forEach(param => {
+      if (!paramValues[param.name]) {
+        if (param.type.includes('List')) {
+          paramValues[param.name] = '[]';
+        } else if (param.type.includes('Dict')) {
+          paramValues[param.name] = '{}';
+        } else if (param.type === 'bool') {
+          paramValues[param.name] = 'false';
+        } else if (param.type === 'int') {
+          paramValues[param.name] = '0';
+        } else {
+          paramValues[param.name] = '';
+        }
+      }
+    });
+
     setFormData({
-      input: testCase.input,
+      parameterValues: paramValues,
       expectedOutput: testCase.expectedOutput,
     });
     setEditingId(testCase.id);
@@ -121,7 +204,7 @@ export default function TestCaseManager({
   const handleCancel = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ input: '', expectedOutput: '' });
+    setFormData({ parameterValues: {}, expectedOutput: '' });
   };
 
   const handleGenerateWithAI = async () => {
@@ -146,6 +229,9 @@ export default function TestCaseManager({
           problemDescription,
           exampleInput,
           exampleOutput,
+          functionName,
+          parameters,
+          returnType,
           count,
           existingTestCases: testCases.map((tc) => ({
             input: tc.input,
@@ -289,23 +375,50 @@ export default function TestCaseManager({
           </h3>
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="input"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Input
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Parameters
               </label>
-              <textarea
-                id="input"
-                required
-                rows={3}
-                value={formData.input}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, input: e.target.value }))
-                }
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                placeholder="e.g., [2, 7, 11, 15], 9"
-              />
+              <div className="space-y-3">
+                {parameters.map((param) => (
+                  <div key={param.name}>
+                    <label
+                      htmlFor={`param-${param.name}`}
+                      className="block text-xs font-medium text-gray-600"
+                    >
+                      {param.name} ({param.type})
+                    </label>
+                    <textarea
+                      id={`param-${param.name}`}
+                      required
+                      rows={2}
+                      value={formData.parameterValues[param.name] || ''}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          parameterValues: {
+                            ...prev.parameterValues,
+                            [param.name]: e.target.value,
+                          },
+                        }))
+                      }
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      placeholder={
+                        param.type.includes('List')
+                          ? '[1, 2, 3]'
+                          : param.type.includes('Dict')
+                          ? '{"key": "value"}'
+                          : param.type === 'int'
+                          ? '42'
+                          : param.type === 'bool'
+                          ? 'true'
+                          : param.type === 'str'
+                          ? '"hello"'
+                          : 'value'
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
               <label

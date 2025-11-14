@@ -54,6 +54,9 @@ interface ProblemWithTestCases {
   description: string;
   exampleInput: string;
   exampleOutput: string;
+  functionName: string;
+  parameters: string; // JSON string
+  returnType: string;
   testCases: TestCase[];
 }
 
@@ -139,15 +142,18 @@ export default function AdminSubmissionDetail() {
     setRerunResults(null);
 
     try {
-      const response = await fetch('/api/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code: submission.code,
-          language: submission.language,
-          testCases: problem.testCases,
-        }),
-      });
+          const response = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: submission.code,
+              language: submission.language,
+              testCases: problem.testCases,
+              functionName: problem.functionName,
+          parameters: JSON.parse(problem.parameters),
+          returnType: problem.returnType,
+            }),
+          });
 
       if (!response.ok) throw new Error('Execution failed');
 
@@ -256,6 +262,9 @@ export default function AdminSubmissionDetail() {
             problemDescription={problem.description}
             exampleInput={problem.exampleInput}
             exampleOutput={problem.exampleOutput}
+            functionName={problem.functionName}
+            parameters={JSON.parse(problem.parameters)}
+            returnType={problem.returnType}
           />
           <div className="mt-4">
             <button

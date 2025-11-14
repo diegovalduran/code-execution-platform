@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeEditor from '@/components/CodeEditor';
+import { getCodeTemplateFromStructured } from '@/lib/functionSignature';
 
 interface Problem {
   id: string;
@@ -11,6 +12,9 @@ interface Problem {
   description: string;
   exampleInput: string;
   exampleOutput: string;
+  functionName: string;
+  parameters: string; // JSON string
+  returnType: string;
   testCases: Array<{
     id: string;
     input: string;
@@ -36,6 +40,7 @@ interface ExecutionResults {
   };
 }
 
+// Default templates - will be replaced with function signature when problem loads
 const DEFAULT_PYTHON_CODE = `def solution():
     # Write your solution here
     # Your function will be called automatically with test inputs
@@ -70,16 +75,24 @@ export default function SolveProblem() {
         // Load saved code and language from localStorage
         const savedCode = localStorage.getItem(`code_${params.id}`);
         const savedLanguage = localStorage.getItem(`language_${params.id}`) || 'python';
-        if (savedCode) {
+        
+        // Check if saved code has old "solution" pattern - if so, clear it to regenerate
+        if (savedCode && (savedCode.includes('def solution') || savedCode.includes('function solution'))) {
+          // Check if it's the old pattern with "solution" prefix
+          if (savedCode.match(/def solution\w+|function solution\w+/)) {
+            // Clear the old code so it regenerates with the cleaned function name
+            localStorage.removeItem(`code_${params.id}`);
+          } else {
+            setCode(savedCode);
+          }
+        } else if (savedCode) {
           setCode(savedCode);
         }
+        
         if (savedLanguage) {
           setLanguage(savedLanguage);
-          if (!savedCode) {
-            // Set default code for selected language
-            setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
-          }
         }
+        // Note: Default code will be set from function signature in fetchProblem
       }
     }
   }, [params.id, searchParams]);
@@ -97,9 +110,18 @@ export default function SolveProblem() {
 
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage);
-    const defaultCode = newLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE;
-    // Only reset code if it's still the old default
-    if (code === DEFAULT_PYTHON_CODE || code === DEFAULT_JAVASCRIPT_CODE) {
+    
+    // Clear test results when switching languages (previous results are for different language)
+    setTestResults(null);
+    
+    // Always reset to default template when switching languages to avoid syntax conflicts
+    if (problem?.functionName && problem?.parameters) {
+      const params = JSON.parse(problem.parameters);
+      const newTemplate = getCodeTemplateFromStructured(problem.functionName, params, problem.returnType, newLanguage);
+      setCode(newTemplate);
+    } else {
+      // No problem definition, use default templates
+      const defaultCode = newLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE;
       setCode(defaultCode);
     }
   };
@@ -110,6 +132,26 @@ export default function SolveProblem() {
       if (!response.ok) throw new Error('Failed to fetch problem');
       const data = await response.json();
       setProblem(data);
+      
+      // If no saved code and no submission being loaded, set code from function definition
+      const savedCode = localStorage.getItem(`code_${id}`);
+      const submissionId = searchParams?.get('submission');
+      const currentLanguage = localStorage.getItem(`language_${id}`) || 'python';
+      
+      // Always regenerate template if we have function definition (will override old localStorage code with "solution" pattern)
+      if (!submissionId && data.functionName && data.parameters) {
+        const params = JSON.parse(data.parameters);
+        const template = getCodeTemplateFromStructured(data.functionName, params, data.returnType, currentLanguage);
+        
+        // Only set if there's no saved code, or if saved code has the old "solution" pattern
+        if (!savedCode || savedCode.match(/def solution\w+|function solution\w+/)) {
+          setCode(template);
+          // Update localStorage with the cleaned version
+          if (savedCode && savedCode.match(/def solution\w+|function solution\w+/)) {
+            localStorage.setItem(`code_${id}`, template);
+          }
+        }
+      }
     } catch (err) {
       setError('Failed to load problem');
       console.error(err);
@@ -142,7 +184,12 @@ export default function SolveProblem() {
         }
         if (savedLanguage) {
           setLanguage(savedLanguage);
-          if (!savedCode) {
+          if (!savedCode && problem?.functionName && problem?.parameters) {
+            // Use function definition template if available
+            const params = JSON.parse(problem.parameters);
+            const template = getCodeTemplateFromStructured(problem.functionName, params, problem.returnType, savedLanguage);
+            setCode(template);
+          } else if (!savedCode) {
             setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
           }
         }
@@ -166,7 +213,14 @@ export default function SolveProblem() {
         body: JSON.stringify({
           code,
           language,
-          testCases: problem.testCases,
+          testCases: problem.testCases.map((tc) => ({
+            id: tc.id,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+          })),
+          functionName: problem.functionName,
+          parameters: JSON.parse(problem.parameters),
+          returnType: problem.returnType,
         }),
       });
 

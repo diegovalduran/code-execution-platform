@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { parseNamedParameters } from '@/lib/functionSignature';
 
 const PISTON_API = 'https://emkc.org/api/v2/piston';
+
+interface Parameter {
+  name: string;
+  type: string;
+}
 
 interface TestCase {
   id: string;
@@ -13,6 +19,9 @@ interface ExecuteRequest {
   code: string;
   language: string;
   testCases: TestCase[];
+  functionName: string;
+  parameters: Parameter[];
+  returnType: string;
 }
 
 interface TestResult {
@@ -27,7 +36,33 @@ interface TestResult {
 export async function POST(request: Request) {
   try {
     const body: ExecuteRequest = await request.json();
-    const { code, language = 'python', testCases } = body;
+    const { code, language = 'python', testCases, functionName, parameters, returnType } = body;
+
+    // Clean up function name: remove "solution" completely (as prefix or anywhere)
+    let cleanFunctionName = functionName.trim();
+    
+    // Remove "solution" if it appears at the start
+    if (cleanFunctionName.toLowerCase().startsWith('solution')) {
+      const afterSolution = cleanFunctionName.substring('solution'.length);
+      if (afterSolution.length > 0) {
+        cleanFunctionName = afterSolution;
+      } else {
+        // If it's just "solution", use a default
+        cleanFunctionName = 'solve';
+      }
+    }
+    
+    // Also remove "solution" if it appears anywhere else (e.g., "twoSumsolution" -> "twoSum")
+    cleanFunctionName = cleanFunctionName.replace(/solution/gi, '');
+    
+    // If we removed everything, use a default
+    if (!cleanFunctionName || cleanFunctionName.trim().length === 0) {
+      cleanFunctionName = 'solve';
+    }
+
+    // Get parameter names from structured parameters
+    const paramNames = parameters.map(p => p.name);
+    const useNamedParams = paramNames.length > 0;
 
     if (!code || !testCases || testCases.length === 0) {
       return NextResponse.json(
@@ -43,6 +78,101 @@ export async function POST(request: Request) {
       const startTime = Date.now();
 
       try {
+        // Parse test case input
+        let functionCall: string;
+        let testInputCode: string;
+        
+        if (useNamedParams) {
+          // Parse named parameters from input string
+          const namedParams = parseNamedParameters(testCase.input, paramNames);
+          
+          if (Object.keys(namedParams).length > 0) {
+            // Build function call with named parameters
+            if (language === 'javascript' || language === 'js') {
+              // For JavaScript, pass parameters as individual arguments, not as an object
+              const paramValues = paramNames.map((param: string) => {
+                let value = namedParams[param] || 'undefined';
+                // Parse JSON string to get actual JavaScript value
+                try {
+                  const parsed = JSON.parse(value);
+                  // Convert to JavaScript format
+                  if (Array.isArray(parsed)) {
+                    value = '[' + parsed.map(v => 
+                      typeof v === 'string' ? `"${v}"` : String(v)
+                    ).join(', ') + ']';
+                  } else if (typeof parsed === 'object' && parsed !== null) {
+                    value = '{' + Object.entries(parsed).map(([k, v]) => 
+                      `"${k}": ${typeof v === 'string' ? `"${v}"` : String(v)}`
+                    ).join(', ') + '}';
+                  } else if (typeof parsed === 'string') {
+                    value = `"${parsed}"`;
+                  } else if (parsed === null) {
+                    value = 'null';
+                  } else {
+                    value = String(parsed);
+                  }
+                } catch {
+                  // If parsing fails, use value as-is
+                }
+                return value;
+              }).join(', ');
+              functionCall = `${cleanFunctionName}(${paramValues})`; // Pass as individual arguments
+              testInputCode = `// Named parameters parsed from: ${testCase.input}`;
+            } else {
+              // Python - convert JSON string values to Python literals
+              const paramPairs = paramNames.map((param: string) => {
+                let value = namedParams[param] || 'None';
+                // Parse JSON string to get actual value, then convert to Python format
+                try {
+                  const parsed = JSON.parse(value);
+                  // Convert to Python literal format
+                  if (Array.isArray(parsed)) {
+                    // Convert array to Python list format: [1, 2, 3]
+                    value = '[' + parsed.map(v => 
+                      typeof v === 'string' ? `"${v}"` : String(v)
+                    ).join(', ') + ']';
+                  } else if (typeof parsed === 'object' && parsed !== null) {
+                    // Convert object to Python dict format: {"key": "value"}
+                    value = '{' + Object.entries(parsed).map(([k, v]) => 
+                      `"${k}": ${typeof v === 'string' ? `"${v}"` : String(v)}`
+                    ).join(', ') + '}';
+                  } else if (typeof parsed === 'string') {
+                    value = `"${parsed}"`;
+                  } else if (parsed === null) {
+                    value = 'None';
+                  } else {
+                    value = String(parsed);
+                  }
+                } catch {
+                  // If parsing fails, use value as-is (might already be in Python format)
+                }
+                return `${param}=${value}`;
+              }).join(', ');
+              functionCall = `${cleanFunctionName}(${paramPairs})`;
+              // Set up test input variables
+              testInputCode = `# Named parameters parsed from: ${testCase.input}`;
+            }
+          } else {
+                // Fallback to positional if parsing failed
+                if (language === 'javascript' || language === 'js') {
+                  testInputCode = `const test_input = ${testCase.input};`;
+                  functionCall = `Array.isArray(test_input) && test_input.length > 0 ? ${cleanFunctionName}(...test_input) : ${cleanFunctionName}(test_input)`;
+                } else {
+                  testInputCode = `test_input = ${testCase.input}`;
+                  functionCall = `${cleanFunctionName}(*test_input) if isinstance(test_input, list) else ${cleanFunctionName}(test_input)`;
+                }
+              }
+            } else {
+              // Use positional arguments (original behavior)
+              if (language === 'javascript' || language === 'js') {
+                testInputCode = `const test_input = ${testCase.input};`;
+                functionCall = `Array.isArray(test_input) && test_input.length > 0 ? ${functionName}(...test_input) : ${functionName}(test_input)`;
+              } else {
+                testInputCode = `test_input = ${testCase.input}`;
+                functionCall = `${functionName}(*test_input) if isinstance(test_input, list) else ${functionName}(test_input)`;
+              }
+            }
+
         // Generate language-specific test execution code
         let codeWithTestExecution: string;
         let fileName: string;
@@ -54,17 +184,10 @@ export async function POST(request: Request) {
 
 // Automatically injected test execution
 try {
-    const test_input = ${testCase.input};
+    ${testInputCode}
     
-    // Call solution with unpacked arguments
-    let result;
-    if (Array.isArray(test_input) && test_input.length > 0) {
-        result = solution(...test_input);
-    } else if (Array.isArray(test_input)) {
-        result = solution(test_input);
-    } else {
-        result = solution(test_input);
-    }
+    // Call solution
+    const result = ${functionCall};
     
     // Print result as JSON
     if (result !== undefined && result !== null) {
@@ -86,20 +209,28 @@ try {
           codeWithTestExecution = `${code}
 
 # Automatically injected test execution
+import json
+${testInputCode}
+
+# Call solution directly
 try:
-    import json
-    test_input = ${testCase.input}
-    
-    # Call solution with unpacked arguments
-    if isinstance(test_input, list):
-        result = solution(*test_input)
-    else:
-        result = solution(test_input)
+    result = ${functionCall}
     
     # Print result as JSON for consistency
-    print(json.dumps(result) if isinstance(result, (list, dict)) else result)
+    if result is None:
+        print(json.dumps(None))  # This will print "null" in JSON format
+    elif isinstance(result, (list, dict, bool, int, float, str)):
+        print(json.dumps(result))
+    else:
+        # For other types, try to convert to string
+        print(json.dumps(str(result)))
+except NameError as e:
+    print(f"ERROR: Function '${cleanFunctionName}' not found - {e}")
+    print(f"DEBUG: Available: {[x for x in globals().keys() if not x.startswith('_')]}")
+    import traceback
+    traceback.print_exc()
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"ERROR: {e}")
     import traceback
     traceback.print_exc()
 `;
@@ -128,17 +259,41 @@ except Exception as e:
         const output = response.data.run?.output || response.data.run?.stdout || '';
         const stderr = response.data.run?.stderr || '';
         
-        // Clean up output
+        // Log the full response for debugging
+        console.log('Execution response:', {
+          output,
+          stderr,
+          functionCall,
+          cleanFunctionName,
+          testCaseInput: testCase.input
+        });
+        
+        // Clean up output - get the last line (the actual result)
         let actualOutput = output.trim();
         const expectedOutput = testCase.expectedOutput.trim();
         
+        // Split by newlines and get the last non-empty line (the actual result)
+        const outputLines = actualOutput.split('\n').filter((line: string) => line.trim());
+        if (outputLines.length > 0) {
+          actualOutput = outputLines[outputLines.length - 1].trim();
+        }
+        
         // Check if there's an error in the output (from our error handling)
         let errorMessage: string | undefined;
-        if (actualOutput.startsWith('ERROR: ')) {
-          errorMessage = actualOutput;
-          actualOutput = '';
+        if (output.includes('ERROR:') || output.includes('DEBUG:')) {
+          // Extract error message from full output
+          const errorMatch = output.match(/ERROR:.*/);
+          if (errorMatch) {
+            errorMessage = errorMatch[0];
+          }
         } else if (stderr) {
           errorMessage = stderr;
+        }
+        
+        // If actualOutput is "null" (JSON representation of None), show it as "None" for clarity
+        if (actualOutput === 'null' && !errorMessage) {
+          // Keep it as "null" - it's the JSON representation of None
+          // This is what the function actually returned
         }
 
         // Compare outputs - handle arrays that might be in different order

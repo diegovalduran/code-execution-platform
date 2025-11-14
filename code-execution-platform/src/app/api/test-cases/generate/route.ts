@@ -5,11 +5,19 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || '',
 });
 
+interface Parameter {
+  name: string;
+  type: string;
+}
+
 interface GenerateRequest {
   problemId: string;
   problemDescription: string;
   exampleInput: string;
   exampleOutput: string;
+  functionName: string;
+  parameters: Parameter[];
+  returnType: string;
   count?: number;
   existingTestCases: Array<{
     input: string;
@@ -20,10 +28,13 @@ interface GenerateRequest {
 export async function POST(request: Request) {
   try {
     const body: GenerateRequest = await request.json();
-    const { problemDescription, exampleInput, exampleOutput, count = 5, existingTestCases } = body;
+    const { problemDescription, exampleInput, exampleOutput, functionName, parameters, returnType, count = 5, existingTestCases } = body;
     
     // Validate and clamp count between 1 and 10
     const testCaseCount = Math.min(Math.max(1, count || 5), 10);
+    
+    // Use structured parameters directly
+    const paramNames = parameters.map(p => p.name);
 
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json(
@@ -50,14 +61,14 @@ Output: ${exampleOutput}
 ${existingExamples ? `Existing Test Cases:\n${existingExamples}\n` : ''}
 
 Generate exactly ${testCaseCount} new test cases. For each test case, provide:
-1. Input: The input as a valid JSON array (e.g., [[2, 7, 11, 15], 9] for two arguments)
+1. Input: Use named parameters format: "${paramNames.map(p => `${p} = value`).join(', ')}"
 2. Expected Output: The expected output as valid JSON (e.g., [0, 1])
 
 Format your response as a JSON array of objects with "input" and "expectedOutput" fields:
 [
   {
-    "input": "[[2, 7, 11, 15], 9]",
-    "expectedOutput": "[0, 1]"
+    "input": "${paramNames.length >= 2 ? `${paramNames[0]} = [3, 2, 4], ${paramNames[1]} = 6` : `${paramNames[0]} = [1, 2, 3]`}",
+    "expectedOutput": "[1, 2]"
   },
   ...
 ]

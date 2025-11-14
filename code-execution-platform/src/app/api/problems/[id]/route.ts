@@ -44,7 +44,31 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { title, description, exampleInput, exampleOutput } = body;
+    const { title, description, exampleInput, exampleOutput, functionName, parameters, returnType } = body;
+
+    if (!functionName || !parameters || !returnType) {
+      return NextResponse.json(
+        { error: 'functionName, parameters, and returnType are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate parameters is valid JSON
+    let parsedParams;
+    try {
+      parsedParams = typeof parameters === 'string' ? JSON.parse(parameters) : parameters;
+      if (!Array.isArray(parsedParams) || parsedParams.length === 0) {
+        return NextResponse.json(
+          { error: 'Parameters must be a non-empty array' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid parameters format' },
+        { status: 400 }
+      );
+    }
 
     const problem = await prisma.problem.update({
       where: { id },
@@ -53,6 +77,9 @@ export async function PUT(
         description,
         exampleInput,
         exampleOutput,
+        functionName,
+        parameters: typeof parameters === 'string' ? parameters : JSON.stringify(parameters),
+        returnType,
       },
     });
 

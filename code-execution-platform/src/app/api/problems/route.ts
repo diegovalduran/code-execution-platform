@@ -27,11 +27,28 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, description, exampleInput, exampleOutput } = body;
+    const { title, description, exampleInput, exampleOutput, functionName, parameters, returnType } = body;
 
-    if (!title || !description || !exampleInput || !exampleOutput) {
+    if (!title || !description || !exampleInput || !exampleOutput || !functionName || !parameters || !returnType) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: title, description, exampleInput, exampleOutput, functionName, parameters, and returnType are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate parameters is valid JSON
+    let parsedParams;
+    try {
+      parsedParams = typeof parameters === 'string' ? JSON.parse(parameters) : parameters;
+      if (!Array.isArray(parsedParams) || parsedParams.length === 0) {
+        return NextResponse.json(
+          { error: 'Parameters must be a non-empty array' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid parameters format' },
         { status: 400 }
       );
     }
@@ -42,6 +59,9 @@ export async function POST(request: Request) {
         description,
         exampleInput,
         exampleOutput,
+        functionName,
+        parameters: typeof parameters === 'string' ? parameters : JSON.stringify(parameters),
+        returnType,
       },
     });
 

@@ -16,6 +16,9 @@ model Problem {
   description     String
   exampleInput    String
   exampleOutput   String
+  functionName    String       // e.g., "twoSum"
+  parameters      String       // JSON array: [{"name": "nums", "type": "List[int]"}, {"name": "target", "type": "int"}]
+  returnType      String       // e.g., "List[int]"
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   testCases       TestCase[]
