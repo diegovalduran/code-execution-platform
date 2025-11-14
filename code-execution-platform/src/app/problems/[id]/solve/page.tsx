@@ -48,13 +48,26 @@ export default function SolveProblem() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [testResults, setTestResults] = useState<ExecutionResults | null>(null);
 
   useEffect(() => {
     if (params.id) {
       fetchProblem(params.id as string);
+      // Load saved code from localStorage
+      const savedCode = localStorage.getItem(`code_${params.id}`);
+      if (savedCode) {
+        setCode(savedCode);
+      }
     }
   }, [params.id]);
+
+  // Save code to localStorage whenever it changes
+  useEffect(() => {
+    if (params.id && code !== DEFAULT_PYTHON_CODE) {
+      localStorage.setItem(`code_${params.id}`, code);
+    }
+  }, [code, params.id]);
 
   const fetchProblem = async (id: string) => {
     try {
@@ -99,6 +112,57 @@ export default function SolveProblem() {
       alert('Failed to run tests. Please try again.');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!testResults) {
+      alert('Please run tests before submitting');
+      return;
+    }
+
+    if (!testResults.summary.allPassed) {
+      const confirm = window.confirm(
+        'Not all tests passed. Do you still want to submit for review?'
+      );
+      if (!confirm) return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemId: problem?.id,
+          code,
+          language: 'python',
+          testResults: testResults.results,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Submission failed');
+
+      alert('Solution submitted for review successfully!');
+      // Optionally redirect to submissions page
+      // router.push('/submissions');
+    } catch (err) {
+      console.error('Error submitting solution:', err);
+      alert('Failed to submit solution. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClear = () => {
+    if (confirm('Are you sure you want to clear your code? This cannot be undone.')) {
+      setCode(DEFAULT_PYTHON_CODE);
+      setTestResults(null);
+      // Clear from localStorage
+      if (params.id) {
+        localStorage.removeItem(`code_${params.id}`);
+      }
     }
   };
 
@@ -197,23 +261,33 @@ export default function SolveProblem() {
               height="500px"
             />
 
-            <div className="mt-4 flex gap-3">
-              <button
-                className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
-                onClick={handleRunTests}
-                disabled={running}
-              >
-                {running ? 'Running Tests...' : 'Run Tests'}
-              </button>
-              <button
-                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-                onClick={() => {
-                  setCode(DEFAULT_PYTHON_CODE);
-                  setTestResults(null);
-                }}
-              >
-                Reset
-              </button>
+            <div className="mt-4 space-y-3">
+              <div className="flex gap-3">
+                <button
+                  className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+                  onClick={handleRunTests}
+                  disabled={running || submitting}
+                >
+                  {running ? 'Running Tests...' : 'Run Tests'}
+                </button>
+                <button
+                  className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                  onClick={handleClear}
+                  disabled={running || submitting}
+                >
+                  Clear
+                </button>
+              </div>
+              
+              {testResults && (
+                <button
+                  className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
+                  onClick={handleSubmit}
+                  disabled={submitting || running}
+                >
+                  {submitting ? 'Submitting...' : 'Submit for Review'}
+                </button>
+              )}
             </div>
           </div>
 
