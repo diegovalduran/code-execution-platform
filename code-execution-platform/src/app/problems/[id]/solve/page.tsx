@@ -41,9 +41,15 @@ const DEFAULT_PYTHON_CODE = `def solution():
     # Your function will be called automatically with test inputs
     pass`;
 
+const DEFAULT_JAVASCRIPT_CODE = `function solution() {
+    // Write your solution here
+    // Your function will be called automatically with test inputs
+}`;
+
 export default function SolveProblem() {
   const params = useParams();
   const [problem, setProblem] = useState<Problem | null>(null);
+  const [language, setLanguage] = useState<string>('python');
   const [code, setCode] = useState(DEFAULT_PYTHON_CODE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -54,20 +60,41 @@ export default function SolveProblem() {
   useEffect(() => {
     if (params.id) {
       fetchProblem(params.id as string);
-      // Load saved code from localStorage
+      // Load saved code and language from localStorage
       const savedCode = localStorage.getItem(`code_${params.id}`);
+      const savedLanguage = localStorage.getItem(`language_${params.id}`) || 'python';
       if (savedCode) {
         setCode(savedCode);
+      }
+      if (savedLanguage) {
+        setLanguage(savedLanguage);
+        if (!savedCode) {
+          // Set default code for selected language
+          setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
+        }
       }
     }
   }, [params.id]);
 
-  // Save code to localStorage whenever it changes
+  // Save code and language to localStorage whenever they change
   useEffect(() => {
-    if (params.id && code !== DEFAULT_PYTHON_CODE) {
-      localStorage.setItem(`code_${params.id}`, code);
+    if (params.id) {
+      const defaultCode = language === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE;
+      if (code !== defaultCode) {
+        localStorage.setItem(`code_${params.id}`, code);
+      }
+      localStorage.setItem(`language_${params.id}`, language);
     }
-  }, [code, params.id]);
+  }, [code, language, params.id]);
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    const defaultCode = newLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE;
+    // Only reset code if it's still the old default
+    if (code === DEFAULT_PYTHON_CODE || code === DEFAULT_JAVASCRIPT_CODE) {
+      setCode(defaultCode);
+    }
+  };
 
   const fetchProblem = async (id: string) => {
     try {
@@ -98,7 +125,7 @@ export default function SolveProblem() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code,
-          language: 'python',
+          language,
           testCases: problem.testCases,
         }),
       });
@@ -137,7 +164,7 @@ export default function SolveProblem() {
         body: JSON.stringify({
           problemId: problem?.id,
           code,
-          language: 'python',
+          language,
           testResults: testResults.results,
         }),
       });
@@ -157,7 +184,8 @@ export default function SolveProblem() {
 
   const handleClear = () => {
     if (confirm('Are you sure you want to clear your code? This cannot be undone.')) {
-      setCode(DEFAULT_PYTHON_CODE);
+      const defaultCode = language === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE;
+      setCode(defaultCode);
       setTestResults(null);
       // Clear from localStorage
       if (params.id) {
@@ -248,16 +276,18 @@ export default function SolveProblem() {
               <h2 className="text-lg font-semibold text-gray-900">Your Solution</h2>
               <select
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-                defaultValue="python"
+                value={language}
+                onChange={(e) => handleLanguageChange(e.target.value)}
               >
                 <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
               </select>
             </div>
 
             <CodeEditor
               value={code}
               onChange={(value) => setCode(value || '')}
-              language="python"
+              language={language === 'javascript' ? 'javascript' : 'python'}
               height="500px"
             />
 

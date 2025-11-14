@@ -285,7 +285,12 @@ export default function AdminSubmissionDetail() {
         {/* Right: Code and Review Actions */}
         <div className="space-y-4">
           <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Solution Code</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Solution Code</h2>
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                {submission.language === 'javascript' ? 'JavaScript' : 'Python'}
+              </span>
+            </div>
             <CodeEditor
               value={submission.code}
               onChange={() => {}}

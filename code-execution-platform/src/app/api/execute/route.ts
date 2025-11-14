@@ -43,9 +43,40 @@ export async function POST(request: Request) {
       const startTime = Date.now();
 
       try {
-        // Inject test case execution after user's code
-        // Parse input and call the solution function automatically
-        const codeWithTestExecution = `${code}
+        // Generate language-specific test execution code
+        let codeWithTestExecution: string;
+        let fileName: string;
+        let pistonLanguage: string;
+
+        if (language === 'javascript' || language === 'js') {
+          // JavaScript execution
+          codeWithTestExecution = `${code}
+
+// Automatically injected test execution
+try {
+    const test_input = ${testCase.input};
+    
+    // Call solution with unpacked arguments
+    let result;
+    if (Array.isArray(test_input) && test_input.length > 0) {
+        result = solution(...test_input);
+    } else if (Array.isArray(test_input)) {
+        result = solution(test_input);
+    } else {
+        result = solution(test_input);
+    }
+    
+    // Print result as JSON
+    console.log(JSON.stringify(result));
+} catch (e) {
+    console.error('Error:', e.message);
+    console.error(e.stack);
+}`;
+          fileName = 'solution.js';
+          pistonLanguage = 'javascript';
+        } else {
+          // Python execution (default)
+          codeWithTestExecution = `${code}
 
 # Automatically injected test execution
 try:
@@ -53,7 +84,6 @@ try:
     test_input = ${testCase.input}
     
     # Call solution with unpacked arguments
-    # If test_input is a list, unpack it as arguments
     if isinstance(test_input, list):
         result = solution(*test_input)
     else:
@@ -66,13 +96,16 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 `;
+          fileName = 'solution.py';
+          pistonLanguage = 'python';
+        }
 
         const response = await axios.post(`${PISTON_API}/execute`, {
-          language: language === 'python' ? 'python' : language,
+          language: pistonLanguage,
           version: '*',
           files: [
             {
-              name: 'solution.py',
+              name: fileName,
               content: codeWithTestExecution,
             },
           ],
