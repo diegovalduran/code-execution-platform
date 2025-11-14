@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import CodeEditor from '@/components/CodeEditor';
 
@@ -48,6 +48,7 @@ const DEFAULT_JAVASCRIPT_CODE = `function solution() {
 
 export default function SolveProblem() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [language, setLanguage] = useState<string>('python');
   const [code, setCode] = useState(DEFAULT_PYTHON_CODE);
@@ -60,21 +61,28 @@ export default function SolveProblem() {
   useEffect(() => {
     if (params.id) {
       fetchProblem(params.id as string);
-      // Load saved code and language from localStorage
-      const savedCode = localStorage.getItem(`code_${params.id}`);
-      const savedLanguage = localStorage.getItem(`language_${params.id}`) || 'python';
-      if (savedCode) {
-        setCode(savedCode);
-      }
-      if (savedLanguage) {
-        setLanguage(savedLanguage);
-        if (!savedCode) {
-          // Set default code for selected language
-          setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
+      
+      // Check if we're loading a specific submission
+      const submissionId = searchParams?.get('submission');
+      if (submissionId) {
+        fetchSubmission(submissionId);
+      } else {
+        // Load saved code and language from localStorage
+        const savedCode = localStorage.getItem(`code_${params.id}`);
+        const savedLanguage = localStorage.getItem(`language_${params.id}`) || 'python';
+        if (savedCode) {
+          setCode(savedCode);
+        }
+        if (savedLanguage) {
+          setLanguage(savedLanguage);
+          if (!savedCode) {
+            // Set default code for selected language
+            setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
+          }
         }
       }
     }
-  }, [params.id]);
+  }, [params.id, searchParams]);
 
   // Save code and language to localStorage whenever they change
   useEffect(() => {
@@ -107,6 +115,38 @@ export default function SolveProblem() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubmission = async (submissionId: string) => {
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}`);
+      if (!response.ok) throw new Error('Failed to fetch submission');
+      const data = await response.json();
+      // Load the submission's code and language
+      setCode(data.code);
+      setLanguage(data.language || 'python');
+      // Also save to localStorage for this problem
+      if (params.id) {
+        localStorage.setItem(`code_${params.id}`, data.code);
+        localStorage.setItem(`language_${params.id}`, data.language || 'python');
+      }
+    } catch (err) {
+      console.error('Failed to load submission:', err);
+      // Fall back to localStorage if submission fetch fails
+      if (params.id) {
+        const savedCode = localStorage.getItem(`code_${params.id}`);
+        const savedLanguage = localStorage.getItem(`language_${params.id}`) || 'python';
+        if (savedCode) {
+          setCode(savedCode);
+        }
+        if (savedLanguage) {
+          setLanguage(savedLanguage);
+          if (!savedCode) {
+            setCode(savedLanguage === 'javascript' ? DEFAULT_JAVASCRIPT_CODE : DEFAULT_PYTHON_CODE);
+          }
+        }
+      }
     }
   };
 

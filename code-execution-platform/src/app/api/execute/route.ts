@@ -67,10 +67,17 @@ try {
     }
     
     // Print result as JSON
-    console.log(JSON.stringify(result));
+    if (result !== undefined && result !== null) {
+        console.log(JSON.stringify(result));
+    } else {
+        console.log('null');
+    }
 } catch (e) {
-    console.error('Error:', e.message);
-    console.error(e.stack);
+    // Print error to stdout so we can capture it
+    console.log('ERROR: ' + e.message);
+    if (e.stack) {
+        console.log('STACK: ' + e.stack);
+    }
 }`;
           fileName = 'solution.js';
           pistonLanguage = 'javascript';
@@ -122,32 +129,49 @@ except Exception as e:
         const stderr = response.data.run?.stderr || '';
         
         // Clean up output
-        const actualOutput = output.trim();
+        let actualOutput = output.trim();
         const expectedOutput = testCase.expectedOutput.trim();
+        
+        // Check if there's an error in the output (from our error handling)
+        let errorMessage: string | undefined;
+        if (actualOutput.startsWith('ERROR: ')) {
+          errorMessage = actualOutput;
+          actualOutput = '';
+        } else if (stderr) {
+          errorMessage = stderr;
+        }
 
         // Compare outputs - handle arrays that might be in different order
         let passed = false;
-        try {
-          const actualParsed = JSON.parse(actualOutput);
-          const expectedParsed = JSON.parse(expectedOutput);
-          
-          // If both are arrays, sort before comparing
-          if (Array.isArray(actualParsed) && Array.isArray(expectedParsed)) {
-            passed = JSON.stringify(actualParsed.slice().sort()) === JSON.stringify(expectedParsed.slice().sort()) && !stderr;
-          } else {
-            passed = actualOutput === expectedOutput && !stderr;
+        if (errorMessage) {
+          passed = false;
+        } else {
+          try {
+            const actualParsed = JSON.parse(actualOutput);
+            const expectedParsed = JSON.parse(expectedOutput);
+            
+            // If both are arrays, sort before comparing (for problems where order doesn't matter)
+            if (Array.isArray(actualParsed) && Array.isArray(expectedParsed)) {
+              // For two-sum type problems, both [0,1] and [1,0] are valid
+              // Sort both arrays and compare
+              const actualSorted = [...actualParsed].sort((a, b) => a - b);
+              const expectedSorted = [...expectedParsed].sort((a, b) => a - b);
+              passed = JSON.stringify(actualSorted) === JSON.stringify(expectedSorted);
+            } else {
+              passed = actualOutput === expectedOutput;
+            }
+          } catch {
+            // Not JSON parseable, do exact string comparison
+            passed = actualOutput === expectedOutput;
           }
-        } catch {
-          // Not JSON parseable, do exact string comparison
-          passed = actualOutput === expectedOutput && !stderr;
         }
 
         results.push({
           testCaseId: testCase.id,
           passed,
-          actualOutput,
+          actualOutput: actualOutput || '(no output)',
           expectedOutput,
-          errorMessage: stderr || undefined,
+          errorMessage: errorMessage || stderr || undefined,
           executionTime,
         });
       } catch (error) {

@@ -111,10 +111,9 @@ export default function SubmissionsPage() {
       ) : (
         <div className="space-y-4">
           {submissions.map((submission) => (
-            <Link
+            <div
               key={submission.id}
-              href={`/submissions/${submission.id}`}
-              className="block rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -147,11 +146,22 @@ export default function SubmissionsPage() {
                     </p>
                   )}
                 </div>
-                <div className="ml-4 text-sm text-gray-500">
-                  View Details →
+                <div className="ml-4 flex gap-2">
+                  <Link
+                    href={`/problems/${submission.problem.id}/solve?submission=${submission.id}`}
+                    className="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                  >
+                    Edit Solution →
+                  </Link>
+                  <Link
+                    href={`/submissions/${submission.id}`}
+                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                  >
+                    View Details
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
