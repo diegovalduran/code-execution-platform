@@ -137,6 +137,9 @@ export default function ProblemDetail() {
             testCases={problem.testCases || []}
             onTestCaseAdded={() => fetchProblem(params.id as string)}
             onTestCaseDeleted={() => fetchProblem(params.id as string)}
+            problemDescription={problem.description}
+            exampleInput={problem.exampleInput}
+            exampleOutput={problem.exampleOutput}
           />
 
           <div className="border-t border-gray-200 pt-6">

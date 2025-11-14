@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface TestCase {
   id: string;
@@ -13,6 +13,9 @@ interface TestCaseManagerProps {
   testCases: TestCase[];
   onTestCaseAdded: () => void;
   onTestCaseDeleted: () => void;
+  problemDescription?: string;
+  exampleInput?: string;
+  exampleOutput?: string;
 }
 
 export default function TestCaseManager({
@@ -20,14 +23,38 @@ export default function TestCaseManager({
   testCases,
   onTestCaseAdded,
   onTestCaseDeleted,
+  problemDescription,
+  exampleInput,
+  exampleOutput,
 }: TestCaseManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [testCaseCount, setTestCaseCount] = useState(5);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     input: '',
     expectedOutput: '',
   });
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Close dialog when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) {
+        setShowGenerateDialog(false);
+      }
+    };
+
+    if (showGenerateDialog) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showGenerateDialog]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +124,87 @@ export default function TestCaseManager({
     setFormData({ input: '', expectedOutput: '' });
   };
 
+  const handleGenerateWithAI = async () => {
+    if (!problemDescription || !exampleInput || !exampleOutput) {
+      alert('Problem details are required to generate test cases');
+      return;
+    }
+
+    // Validate count
+    const count = Math.min(Math.max(1, testCaseCount), 10);
+    setTestCaseCount(count);
+
+    setGenerating(true);
+    setShowGenerateDialog(false);
+    try {
+      // Call the generate API
+      const response = await fetch('/api/test-cases/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemId,
+          problemDescription,
+          exampleInput,
+          exampleOutput,
+          count,
+          existingTestCases: testCases.map((tc) => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate test cases');
+      }
+
+      const data = await response.json();
+      const generatedTestCases = data.testCases;
+
+      // Batch create all generated test cases
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const testCase of generatedTestCases) {
+        try {
+          const createResponse = await fetch('/api/test-cases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              problemId,
+              input: testCase.input,
+              expectedOutput: testCase.expectedOutput,
+            }),
+          });
+
+          if (createResponse.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err) {
+          errorCount++;
+          console.error('Error creating test case:', err);
+        }
+      }
+
+      // Refresh test cases
+      onTestCaseAdded();
+
+      if (successCount > 0) {
+        alert(`Successfully generated ${successCount} test case(s)${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+      } else {
+        alert('Failed to create generated test cases');
+      }
+    } catch (error) {
+      console.error('Error generating test cases:', error);
+      alert(error instanceof Error ? error.message : 'Failed to generate test cases');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -104,12 +212,70 @@ export default function TestCaseManager({
           Test Cases ({testCases.length})
         </h2>
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-          >
-            Add Test Case
-          </button>
+          <div className="flex gap-2">
+            {problemDescription && exampleInput && exampleOutput && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowGenerateDialog(true)}
+                  disabled={generating}
+                  className="rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-50"
+                >
+                  {generating ? 'Generating...' : '✨ Generate with AI'}
+                </button>
+                {showGenerateDialog && (
+                  <div
+                    ref={dialogRef}
+                    className="absolute right-0 top-12 z-10 w-64 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+                  >
+                    <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                      Generate Test Cases
+                    </h3>
+                    <div className="mb-4">
+                      <label
+                        htmlFor="testCaseCount"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Number of test cases (max 10)
+                      </label>
+                      <input
+                        id="testCaseCount"
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={testCaseCount}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          setTestCaseCount(Math.min(Math.max(1, value), 10));
+                        }}
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setShowGenerateDialog(false)}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleGenerateWithAI}
+                        disabled={generating}
+                        className="rounded-md bg-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-50"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setShowForm(true)}
+              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+            >
+              Add Test Case
+            </button>
+          </div>
         )}
       </div>
 

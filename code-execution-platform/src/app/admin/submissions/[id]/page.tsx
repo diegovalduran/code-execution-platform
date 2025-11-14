@@ -253,6 +253,9 @@ export default function AdminSubmissionDetail() {
                 setProblem(problemData);
               }
             }}
+            problemDescription={problem.description}
+            exampleInput={problem.exampleInput}
+            exampleOutput={problem.exampleOutput}
           />
           <div className="mt-4">
             <button
